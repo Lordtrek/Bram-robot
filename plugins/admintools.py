@@ -48,7 +48,7 @@ from pyUltroid.dB import DEVLIST
 from pyUltroid.functions.admins import ban_time
 from telethon.errors import BadRequestError
 from telethon.errors.rpcerrorlist import ChatNotModifiedError, UserIdInvalidError
-from telethon.tl.functions.channels import GetFullChannelRequest
+from telethon.tl.functions.channels import GetFullChannelRequest, EditAdminRequest
 from telethon.tl.functions.messages import GetFullChatRequest, SetHistoryTTLRequest
 from telethon.tl.types import InputMessagesFilterPinned
 from telethon.utils import get_display_name
@@ -79,10 +79,20 @@ async def prmte(ult):
     await ult.get_chat()
     user, rank = await get_uinfo(ult)
     rank = rank or "Admin"
+    FullRight = False
     if not user:
         return await xx.edit(get_string("pro_1"))
+    if rank.split()[0] == "-f":
+        try:
+            rank = rank.split(maxsplit=1)[1]
+        except IndexError:
+            rank = "Admin"
+        FullRight = True
     try:
-        await ult.client.edit_admin(
+        if FullRight:
+            await ult.client(EditAdminRequest(ult.chat_id, user.id, ult.chat.admin_rights, rank))
+        else:
+            await ult.client.edit_admin(
             ult.chat_id,
             user.id,
             invite_users=True,
@@ -91,7 +101,7 @@ async def prmte(ult):
             pin_messages=True,
             manage_call=True,
             title=rank,
-        )
+            )
         await eod(
             xx, get_string("pro_2").format(inline_mention(user), ult.chat.title, rank)
         )
@@ -270,10 +280,9 @@ async def tkicki(e):
 
 @ultroid_cmd(
     pattern="pin$",
-    admins_only=True,
     manager=True,
     require="pin_messages",
-    fullsudo=True,
+    fullsudo=True
 )
 async def pin(msg):
     if not msg.is_reply:
@@ -294,7 +303,6 @@ async def pin(msg):
 
 @ultroid_cmd(
     pattern="unpin($| (.*))",
-    admins_only=True,
     manager=True,
     require="pin_messages",
     fullsudo=True,
